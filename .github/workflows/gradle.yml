@@ -1,5 +1,6 @@
-# This workflow will build a Java project with Gradle
-# For more information check https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-gradle
+# This workflow builds and tests a Java project with Gradle,
+# caches dependencies, and archives build artifacts and their hashes.
+# For more information check https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-java-with-gradle
 
 name: Java CI with Gradle
 
@@ -14,34 +15,50 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      # Step 1: Check out the repository code
+      - name: Checkout repository
+        uses: actions/checkout@v4 # Updated to v4
+
+      # Step 2: Set up JDK 17
       - name: Set up JDK 17
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4 # Updated to v4
         with:
           java-version: '17'
-          distribution: 'adopt'
+          distribution: 'temurin' # Changed to 'temurin' as 'adopt' is deprecated
+          cache: gradle # Enable caching for Gradle dependencies
+
+      # Step 3: Grant execute permission for gradlew
+      # This step is necessary if gradlew doesn't have execute permissions in your repository
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
-      - name: Build with Gradle
-        run: ./gradlew build
 
-      - name: Archive Artifacts
-        uses: actions/upload-artifact@v2
+      # Step 4: Build and test with Gradle
+      # Runs the build and test tasks
+      - name: Build and Test with Gradle
+        run: ./gradlew build test # Added 'test' task
+
+      # Step 5: Archive build artifacts
+      # Archives the JAR files produced by the build
+      - name: Archive Build Artifacts
+        uses: actions/upload-artifact@v4 # Updated to v4
         with:
           name: Artifacts
-          path: ./build/libs
+          path: build/libs/*.jar # Be more specific to upload only JAR files
 
-      - name: Hash Artifacts
+      # Step 6: Generate SHA256 Hashes for Artifacts
+      # Calculates SHA256 hashes for the generated JAR files
+      - name: Generate SHA256 Hashes
         run: |
-          for u in $(ls) 
-          do
-          echo "$(sha256sum $u)" >> hashes.sha256
-          done
+          cd build/libs
+          sha256sum *.jar > hashes.sha256
+          echo "Generated hashes.sha256"
+          cat hashes.sha256
         shell: bash
-        working-directory: ./build/libs
 
-      - name: Upload Hashes
-        uses: actions/upload-artifact@v2
+      # Step 7: Upload Hashes File
+      # Uploads the file containing the SHA256 hashes
+      - name: Upload Hashes File
+        uses: actions/upload-artifact@v4 # Updated to v4
         with:
           name: Hashes
-          path: ./build/libs/hashes.sha256
+          path: build/libs/hashes.sha256
